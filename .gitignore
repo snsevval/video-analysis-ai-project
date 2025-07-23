@@ -1,0 +1,11 @@
+﻿video_analysis_env/
+outputs/
+uploads/
+__pycache__/
+*.pyc
+*.db
+.env
+*.log
+node_modules/
+.DS_Store
+Thumbs.db
