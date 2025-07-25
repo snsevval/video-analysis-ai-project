@@ -165,7 +165,7 @@ function checkStatus() {
             const status = data.data;
             updateAnalysisStatus(status);
             
-            if (status.status === 'completed') {
+            if (status.status === 'completed') {  // ← BU SATIRI DEĞİŞTİRDİNİZ
                 clearInterval(pollInterval);
                 showResults(status);
                 isProcessing = false;
@@ -218,7 +218,8 @@ function showResults(status) {
     // Enable download buttons
     document.getElementById('downloadVideoBtn').disabled = false;
     document.getElementById('downloadDbBtn').disabled = false;
-    
+    document.getElementById('mainPageReportBtn').disabled = false; // ← BU SATIRI EKLEYİN
+
     // Update status
     document.getElementById('statusText').textContent = 'Tamamlandı';
     updateProgress('Analiz başarıyla tamamlandı!', 100);
@@ -419,3 +420,77 @@ function createFloatingParticles() {
 
 // Initialize particles
 createFloatingParticles();
+// ============= ANA SAYFA LLM RAPOR FONKSİYONU =============
+
+function generateMainPageReport() {
+    if (!currentTaskId) {
+        showNotification('❌ Önce bir video analizi yapmalısınız!', 'error');
+        return;
+    }
+    
+    const reportBtn = document.getElementById('mainPageReportBtn');
+    reportBtn.disabled = true;
+    reportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Rapor Hazırlanıyor...';
+    
+    // Database dosya adını oluştur
+    const dbFileName = `${currentTaskId}/alarm_analysis.db`;
+    
+    showNotification('🤖 LLM raporu hazırlanıyor... Bu işlem 3-7 dakika sürebilir.', 'info');
+    
+    // AJAX ile rapor iste
+    fetch('/generate_report', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+            db_file: dbFileName
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Raporu popup'ta göster veya yeni sayfada aç
+            showReportPopup(data.report, data.stats);
+            showNotification('🎉 LLM raporu başarıyla oluşturuldu!', 'success');
+        } else {
+            showNotification('❌ Rapor oluşturulurken hata: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('❌ Bağlantı hatası: ' + error.message + '\n\nOllama sunucusu çalışıyor mu?', 'error');
+    })
+    .finally(() => {
+        reportBtn.disabled = false;
+        reportBtn.innerHTML = '<i class="fas fa-robot me-2"></i>LLM Rapor';
+    });
+}
+
+function showReportPopup(report, stats) {
+    // Basit popup rapor gösterici
+    const popup = window.open('', 'LLM_Rapor', 'width=800,height=600,scrollbars=yes');
+    popup.document.write(`
+        <html>
+        <head>
+            <title>LLM Güvenlik Raporu</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+                h1 { color: #4CAF50; }
+                .stats { background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0; }
+                .report { white-space: pre-wrap; }
+            </style>
+        </head>
+        <body>
+            <h1>🤖 LLM Güvenlik Raporu</h1>
+            <div class="stats">
+                <strong>İstatistikler:</strong><br>
+                📊 Toplam Alarm: ${stats.total_alarms}<br>
+                ⏱️ Video Süresi: ${Math.round(stats.video_duration)}s<br>
+                🚨 Kritik Durum: ${stats.critical_moments}
+            </div>
+            <div class="report">${report}</div>
+            <button onclick="window.print()" style="margin-top: 20px; padding: 10px 20px;">🖨️ Yazdır</button>
+        </body>
+        </html>
+    `);
+}

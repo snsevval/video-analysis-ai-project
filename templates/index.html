@@ -131,17 +131,41 @@
                                 <i class="fas fa-download me-2"></i>Sonuç Dosyaları
                             </h6>
                             <div class="row">
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <button class="btn btn-primary-custom btn-custom w-100" onclick="downloadVideo()" id="downloadVideoBtn" disabled>
                                         <i class="fas fa-video me-2"></i>Analiz Edilmiş Video
                                     </button>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <button class="btn btn-secondary-custom btn-custom w-100" onclick="downloadDatabase()" id="downloadDbBtn" disabled>
                                         <i class="fas fa-database me-2"></i>Veritabanı
                                     </button>
                                 </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-tertiary-custom btn-custom w-100" onclick="generateMainPageReport()" id="mainPageReportBtn" disabled>
+                                        <i class="fas fa-robot me-2"></i>LLM Rapor
+                                    </button>
+                                </div>
                             </div>
+                              
+                            <!-- LLM Rapor Modal/Panel -->
+                            <div id="llmReportPanel" style="display: none; margin-top: 20px; padding: 20px; border: 1px solid var(--accent-blue); border-radius: 10px; background: rgba(76, 175, 80, 0.05);">
+                                <h6 style="color: var(--text-primary);">
+                                    <i class="fas fa-robot me-2" style="color: var(--accent-blue);"></i>LLM Analiz Raporu
+                                </h6>
+                                <div id="llmReportContent" style="max-height: 400px; overflow-y: auto; padding: 15px; background: white; border-radius: 8px; white-space: pre-wrap; line-height: 1.6;">
+                                    <!-- Rapor buraya gelecek -->
+                                </div>
+                                <div style="margin-top: 15px; text-align: right;">
+                                    <button class="btn btn-secondary-custom btn-sm" onclick="downloadReportPdf()" id="downloadReportPdfBtn">
+                                        <i class="fas fa-file-pdf me-2"></i>PDF İndir
+                                    </button>
+                                    <button class="btn btn-primary-custom btn-sm" onclick="copyReport()" id="copyReportBtn">
+                                        <i class="fas fa-copy me-2"></i>Kopyala
+                                    </button>
+                                </div>
+                            </div>
+                            
                         </div>
                     </div>
                 </div>
