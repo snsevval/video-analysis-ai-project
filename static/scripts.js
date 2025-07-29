@@ -450,8 +450,8 @@ function generateMainPageReport() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Raporu popup'ta göster veya yeni sayfada aç
-            showReportPopup(data.report, data.stats);
+            // Raporu indirsin direkt 
+            downloadReportAsFile(data.report, data.stats);
             showNotification('🎉 LLM raporu başarıyla oluşturuldu!', 'success');
         } else {
             showNotification('❌ Rapor oluşturulurken hata: ' + data.error, 'error');
@@ -466,31 +466,36 @@ function generateMainPageReport() {
     });
 }
 
-function showReportPopup(report, stats) {
-    // Basit popup rapor gösterici
-    const popup = window.open('', 'LLM_Rapor', 'width=800,height=600,scrollbars=yes');
-    popup.document.write(`
-        <html>
-        <head>
-            <title>LLM Güvenlik Raporu</title>
-            <style>
-                body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
-                h1 { color: #4CAF50; }
-                .stats { background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0; }
-                .report { white-space: pre-wrap; }
-            </style>
-        </head>
-        <body>
-            <h1>🤖 LLM Güvenlik Raporu</h1>
-            <div class="stats">
-                <strong>İstatistikler:</strong><br>
-                📊 Toplam Alarm: ${stats.total_alarms}<br>
-                ⏱️ Video Süresi: ${Math.round(stats.video_duration)}s<br>
-                🚨 Kritik Durum: ${stats.critical_moments}
-            </div>
-            <div class="report">${report}</div>
-            <button onclick="window.print()" style="margin-top: 20px; padding: 10px 20px;">🖨️ Yazdır</button>
-        </body>
-        </html>
-    `);
+function downloadReportAsFile(report, stats) {
+    const timestamp = new Date().toLocaleString('tr-TR').replace(/[/:]/g, '-');
+    const filename = `LLM_Guvenlik_Raporu_${timestamp}.txt`;
+    
+    const reportContent = `
+🤖 SECURITYVISION LLM GÜVENLİK RAPORU
+=====================================
+Oluşturma Tarihi: ${new Date().toLocaleString('tr-TR')}
+Analiz ID: ${currentTaskId}
+
+📊 İSTATİSTİKLER:
+- Toplam Alarm: ${stats.total_alarms}
+- Video Süresi: ${Math.round(stats.video_duration)} saniye
+- Kritik Durum: ${stats.critical_moments}
+
+📝 DETAYLI ANALİZ:
+${report}
+
+=====================================
+Bu rapor SecurityVision Video Güvenlik & Tehlike Tespit Sistemi 
+tarafından yapay zeka ile otomatik olarak oluşturulmuştur.
+    `;
+    
+    // Dosyayı indir
+    const blob = new Blob([reportContent], { type: 'text/plain;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
 }

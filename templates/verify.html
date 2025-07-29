@@ -1,0 +1,116 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecurityVision - Email Doğrulama</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="floating-particles"></div>
+    
+    <div class="container-fluid">
+        <div class="main-container">
+            <!-- Navbar -->
+            <nav class="navbar navbar-expand-lg">
+                <div class="container-fluid">
+                    <a class="navbar-brand" href="/">
+                        <i class="fas fa-shield-alt me-2"></i>SecurityVision
+                    </a>
+                    <div class="navbar-nav ms-auto">
+                        <span class="nav-link"><i class="fas fa-envelope-open-text me-1"></i>Doğrulama</span>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="login-wrapper">
+                <!-- Hero Section -->
+                <div class="hero-section text-center mb-5">
+                    <h1 class="hero-title">
+                        <i class="fas fa-envelope-open-text me-3"></i>
+                        Email Doğrulama
+                    </h1>
+                    <p class="hero-subtitle">
+                        E-mail adresinize gönderilen doğrulama kodunu girin
+                    </p>
+                </div>
+
+                <!-- Verification Panel -->
+                <div class="row justify-content-center">
+                    <div class="col-lg-5 col-md-7 col-sm-9">
+                        <div class="control-panel">
+                            <h5 class="section-title text-center">
+                                <i class="fas fa-key me-2"></i>Doğrulama Kodu
+                            </h5>
+                            
+                            <!-- Verification Area -->
+                            <div class="file-upload-area login-area">
+                                <div>
+                                    <i class="fas fa-envelope-open login-icon" style="color: var(--success-color);"></i>
+                                    <h6 class="login-title">E-mail Gönderildi!</h6>
+                                    <p class="login-subtitle" id="emailDisplay">
+                                        6 haneli doğrulama kodunu kontrol edin
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <form id="verifyForm">
+                                <div class="mb-4">
+                                    <!-- 6 haneli kod girişi -->
+                                    <div class="code-input-container">
+                                        <input type="text" class="form-control code-input" id="digit1" maxlength="1" pattern="[0-9]">
+                                        <input type="text" class="form-control code-input" id="digit2" maxlength="1" pattern="[0-9]">
+                                        <input type="text" class="form-control code-input" id="digit3" maxlength="1" pattern="[0-9]">
+                                        <input type="text" class="form-control code-input" id="digit4" maxlength="1" pattern="[0-9]">
+                                        <input type="text" class="form-control code-input" id="digit5" maxlength="1" pattern="[0-9]">
+                                        <input type="text" class="form-control code-input" id="digit6" maxlength="1" pattern="[0-9]">
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary-custom btn-custom w-100 mb-3" id="verifyBtn">
+                                    <i class="fas fa-check-circle me-2"></i>Kodu Doğrula
+                                </button>
+                                
+                                <button type="button" class="btn btn-secondary-custom btn-custom w-100" id="resendBtn">
+                                    <i class="fas fa-redo me-2"></i>Yeni Kod Gönder
+                                </button>
+                            </form>
+
+                            <div class="text-center mt-4">
+                                <small class="login-security-text">
+                                    <i class="fas fa-clock me-1"></i>
+                                    Kodunuz 10 dakika geçerlidir
+                                </small>
+                                <br>
+                                <small class="login-security-text mt-2 d-block">
+                                    <a href="/" style="color: var(--accent-blue); text-decoration: none;">
+                                        <i class="fas fa-arrow-left me-1"></i>
+                                        Farklı e-mail kullan
+                                    </a>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alt Bilgi -->
+                <div class="alert-custom login-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>E-mail alamıyor musunuz?</strong> Spam klasörünüzü kontrol edin. 
+                    Kod gelmiyorsa "Yeni Kod Gönder" butonunu kullanın.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='verify.js') }}"></script>
+</body>
+</html>

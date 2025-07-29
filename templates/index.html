@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video İzleme ve Tehlike Tespit Sistemi</title>
+    <title>SecurityVision - Giriş</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -14,240 +14,111 @@
     
     <div class="container-fluid">
         <div class="main-container">
+            <!-- Navbar -->
             <nav class="navbar navbar-expand-lg">
                 <div class="container-fluid">
                     <a class="navbar-brand" href="#">
                         <i class="fas fa-shield-alt me-2"></i>SecurityVision
                     </a>
                     <div class="navbar-nav ms-auto">
-                        <a class="nav-link" href="#"><i class="fas fa-home me-1"></i>Ana Sayfa</a>
-                        <a class="nav-link" href="#"><i class="fas fa-database me-1"></i>Kayıtlar</a>
-                        <a class="nav-link" href="#"><i class="fas fa-cog me-1"></i>Ayarlar</a>
+                        <span class="nav-link"><i class="fas fa-sign-in-alt me-1"></i>Giriş</span>
                     </div>
                 </div>
             </nav>
 
-            <div class="hero-section">
-                <h1 class="hero-title">
-                    <i class="fas fa-video me-3"></i>
-                    Video Güvenlik & Tehlike Tespit Sistemi
-                </h1>
-                <p class="hero-subtitle">
-                    Yapay zeka destekli gerçek zamanlı video analizi ve akıllı güvenlik çözümleri
-                </p>
-            </div>
+            <div class="login-wrapper">
+                <!-- Hero Section -->
+                <div class="hero-section text-center mb-5">
+                    <h1 class="hero-title">
+                        <i class="fas fa-video me-3"></i>
+                        Video Güvenlik & Tehlike Tespit Sistemi
+                    </h1>
+                    <p class="hero-subtitle">
+                        Yapay zeka destekli gerçek zamanlı video analizi ve akıllı güvenlik çözümleri
+                    </p>
+                </div>
 
-            <div class="row">
-                <div class="col-lg-8">
-                    <div class="video-container">
-                        <div class="live-indicator">
-                            <i class="fas fa-circle me-2"></i>DEMO
-                        </div>
-                        <video class="demo-video" autoplay muted loop>
-                            <source src="/static/video/video.mp4" type="video/mp4">
-                            Video desteklenmiyor.
-                        </video>
-                    </div>
-
-                    <div class="control-panel">
-                        <h5 class="section-title">
-                            <i class="fas fa-sliders-h me-2"></i>Kontrol Merkezi
-                        </h5>
-                        
-                        <div class="file-upload-area" id="uploadArea">
-                            <input type="file" id="fileInput" accept="video/*" style="position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer;">
-                            <div style="pointer-events: none;">
-                                <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: var(--accent-blue); margin-bottom: 15px;"></i>
-                                <h6 style="color: var(--text-primary);">Video Dosyası Yükle</h6>
-                                <p style="color: var(--text-muted);" id="uploadText">Dosyayı buraya sürükleyin veya seçmek için tıklayın</p>
-                                <small style="color: var(--text-muted);">Desteklenen formatlar: MP4, AVI, MOV, MKV</small>
-                            </div>
-                        </div>     
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <button class="btn btn-primary-custom btn-custom w-100" onclick="startProcessing()" id="startBtn" disabled>
-                                    <i class="fas fa-play me-2"></i>Analizi Başlat
-                                </button>
-                            </div>
-                            <div class="col-md-6">
-                                <button class="btn btn-secondary-custom btn-custom w-100" onclick="stopProcessing()" id="stopBtn" disabled>
-                                    <i class="fas fa-stop me-2"></i>Analizi Durdur
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Analysis Progress Panel -->
-                    <div class="analysis-panel" id="analysisPanel" style="display: none;">
-                        <h5 class="section-title">
-                            <i class="fas fa-chart-line me-2"></i>Analiz Durumu
-                        </h5>
-                        
-                        <div class="analysis-info">
-                            <strong>Analysis ID:</strong> <span id="analysisId">-</span><br>
-                            <strong>Dosya:</strong> <span id="fileName">-</span><br>
-                            <strong>Durum:</strong> <span id="statusText">-</span>
-                        </div>
-
-                        <div class="progress-section">
-                            <div class="progress-label">
-                                <span id="progressMessage">Hazırlanıyor...</span>
-                                <span id="progressPercent">0%</span>
-                            </div>
-                            <div class="progress-custom">
-                                <div class="progress-bar-custom" id="progressBar" style="width: 0%"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Results Panel -->
-                    <div class="results-panel" id="resultsPanel" style="display: none;">
-                        <h5 class="section-title">
-                            <i class="fas fa-chart-bar me-2"></i>Analiz Sonuçları
-                        </h5>
-                        
-                        <div class="results-grid">
-                            <div class="result-stat">
-                                <div class="result-number" id="statFrames">-</div>
-                                <div class="result-label">İşlenen Frame</div>
-                            </div>
-                            <div class="result-stat">
-                                <div class="result-number" id="statAlarms">-</div>
-                                <div class="result-label">Toplam Alarm</div>
-                            </div>
-                            <div class="result-stat">
-                                <div class="result-number" id="statDuration">-</div>
-                                <div class="result-label">Video Süresi (sn)</div>
-                            </div>
-                            <div class="result-stat">
-                                <div class="result-number" id="statDangerous">-</div>
-                                <div class="result-label">Tehlikeli Durum</div>
-                            </div>
-                        </div>
-
-                        <div class="download-section">
-                            <h6 style="color: var(--text-primary); margin-bottom: 15px;">
-                                <i class="fas fa-download me-2"></i>Sonuç Dosyaları
-                            </h6>
-                            <div class="row">
-                                <div class="col-md-4">
-                                    <button class="btn btn-primary-custom btn-custom w-100" onclick="downloadVideo()" id="downloadVideoBtn" disabled>
-                                        <i class="fas fa-video me-2"></i>Analiz Edilmiş Video
-                                    </button>
-                                </div>
-                                <div class="col-md-4">
-                                    <button class="btn btn-secondary-custom btn-custom w-100" onclick="downloadDatabase()" id="downloadDbBtn" disabled>
-                                        <i class="fas fa-database me-2"></i>Veritabanı
-                                    </button>
-                                </div>
-                                <div class="col-md-4">
-                                    <button class="btn btn-tertiary-custom btn-custom w-100" onclick="generateMainPageReport()" id="mainPageReportBtn" disabled>
-                                        <i class="fas fa-robot me-2"></i>LLM Rapor
-                                    </button>
-                                </div>
-                            </div>
-                              
-                            <!-- LLM Rapor Modal/Panel -->
-                            <div id="llmReportPanel" style="display: none; margin-top: 20px; padding: 20px; border: 1px solid var(--accent-blue); border-radius: 10px; background: rgba(76, 175, 80, 0.05);">
-                                <h6 style="color: var(--text-primary);">
-                                    <i class="fas fa-robot me-2" style="color: var(--accent-blue);"></i>LLM Analiz Raporu
-                                </h6>
-                                <div id="llmReportContent" style="max-height: 400px; overflow-y: auto; padding: 15px; background: white; border-radius: 8px; white-space: pre-wrap; line-height: 1.6;">
-                                    <!-- Rapor buraya gelecek -->
-                                </div>
-                                <div style="margin-top: 15px; text-align: right;">
-                                    <button class="btn btn-secondary-custom btn-sm" onclick="downloadReportPdf()" id="downloadReportPdfBtn">
-                                        <i class="fas fa-file-pdf me-2"></i>PDF İndir
-                                    </button>
-                                    <button class="btn btn-primary-custom btn-sm" onclick="copyReport()" id="copyReportBtn">
-                                        <i class="fas fa-copy me-2"></i>Kopyala
-                                    </button>
+                <!-- Login Panel -->
+                <div class="row justify-content-center w-100">
+                    <div class="col-lg-5 col-md-7 col-sm-9">
+                        <div class="control-panel">
+                            <h5 class="section-title text-center">
+                                <i class="fas fa-sliders-h me-2"></i>Sistem Girişi
+                            </h5>
+                            
+                            <!-- Login Area -->
+                            <div class="file-upload-area login-area">
+                                <div>
+                                    <i class="fas fa-user-shield login-icon"></i>
+                                    <h6 class="login-title">E-mail ile Giriş</h6>
+                                    <p class="login-subtitle">Güvenlik sistemine erişim için e-mail adresinizi girin</p>
                                 </div>
                             </div>
                             
+                            <!-- Email Giriş Formu -->
+                            <div id="emailForm">
+                                <div class="mb-4">
+                                    <input 
+                                        type="email" 
+                                        class="form-control login-input" 
+                                        id="email" 
+                                        name="email" 
+                                        placeholder="ornek@email.com"
+                                        required
+                                    >
+                                </div>
+                                
+                                <button type="button" class="btn btn-primary-custom btn-custom w-100 mb-3" onclick="sendVerificationCode()">
+                                    <i class="fas fa-paper-plane me-2"></i>Doğrulama Kodu Gönder
+                                </button>
+                            </div>
+
+                            <!-- Doğrulama Kodu Formu (Gizli) -->
+                            <div id="verificationForm" style="display: none;">
+                                <div class="mb-3">
+                                    <label for="verificationCode" class="form-label text-white">Doğrulama Kodu</label>
+                                    <input 
+                                        type="text" 
+                                        class="form-control login-input text-center" 
+                                        id="verificationCode" 
+                                        name="code" 
+                                        placeholder="6 haneli kod"
+                                        maxlength="6"
+                                        style="letter-spacing: 5px; font-size: 1.2rem;"
+                                        required
+                                    >
+                                    <small class="text-muted">Email adresinize gönderilen 6 haneli kodu girin</small>
+                                </div>
+                                
+                                <button type="button" class="btn btn-primary-custom btn-custom w-100 mb-2" onclick="verifyAndLogin()">
+                                    <i class="fas fa-sign-in-alt me-2"></i>Giriş Yap
+                                </button>
+                                
+                                <button type="button" class="btn btn-secondary-custom btn-custom w-100 mb-2" onclick="resendCode()">
+                                    <i class="fas fa-redo me-2"></i>Kodu Yeniden Gönder
+                                </button>
+                                
+                                <button type="button" class="btn btn-tertiary-custom btn-custom w-100" onclick="backToEmail()">
+                                    <i class="fas fa-arrow-left me-2"></i>Geri Dön
+                                </button>
+                            </div>
+
+                            <div class="text-center">
+                                <small class="login-security-text">
+                                    <i class="fas fa-shield-check me-1"></i>
+                                    SSL ile şifrelenmiş güvenli bağlantı
+                                </small>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-lg-4">
-                    <div class="status-card success" id="systemStatus">
-                        <h6 style="color: var(--text-primary);">
-                            <i class="fas fa-shield-alt me-2" style="color: var(--accent-blue);"></i>
-                            Sistem Durumu
-                        </h6>
-                        <p style="color: var(--text-secondary); margin-bottom: 10px;" id="systemStatusText">Aktif ve çalışıyor</p>
-                        <div class="progress-custom">
-                            <div class="progress-bar-custom" style="width: 92%" id="systemProgressBar"></div>
-                        </div>
-                        <small style="color: var(--text-muted);">CPU: 45% | RAM: 67% | GPU: 78%</small>
-                    </div>
-
-                    <div class="status-card danger" id="dangerStatus">
-                        <h6 style="color: var(--text-primary);">
-                            <i class="fas fa-exclamation-triangle me-2" style="color: var(--accent-light-blue);"></i>
-                            Tehlike Durumu
-                        </h6>
-                        <p style="color: var(--text-secondary); margin-bottom: 5px;" id="dangerText">Beklemede...</p>
-                        <small style="color: var(--text-muted);" id="dangerLocation">-</small>
-                        <br>
-                        <small style="color: var(--accent-light-blue);" id="dangerLevel">Risk Seviyesi: Normal</small>
-                    </div>
-
-                    <div class="status-card warning">
-                        <h6 style="color: var(--text-primary);">
-                            <i class="fas fa-database me-2" style="color: var(--accent-dark-blue);"></i>
-                            Veri Tabanı
-                        </h6>
-                        <p style="color: var(--text-secondary); margin-bottom: 5px;" id="dbStatusText">Hazır</p>
-                        <small style="color: var(--text-muted);" id="dbLastUpdate">Son güncelleme: -</small>
-                        <br>
-                        <small style="color: var(--accent-dark-blue);" id="dbRecordCount">Toplam: 0 kayıt</small>
-                    </div>
-
-                    <div class="control-panel">
-                        <h6 class="section-title" style="font-size: 1.1rem;">
-                            <i class="fas fa-tools me-2"></i>Hızlı Erişim
-                        </h6>
-                        
-                        <button class="btn btn-primary-custom btn-custom w-100 mb-3" onclick="showDatabase()">
-                            <i class="fas fa-table me-2"></i>Kayıtları Görüntüle
-                        </button>
-                        
-                        <button class="btn btn-secondary-custom btn-custom w-100 mb-3" onclick="analyzeVideo()">
-                            <i class="fas fa-chart-bar me-2"></i>Video Analizi
-                        </button>
-                        
-                        <button class="btn btn-tertiary-custom btn-custom w-100" onclick="exportData()">
-                            <i class="fas fa-download me-2"></i>Rapor İndir
-                        </button>
-                    </div>
+                <!-- Alt Bilgi -->
+                <div class="alert-custom login-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>SecurityVision:</strong> E-mail adresinizi girerek video analiz sistemine erişebilirsiniz. 
+                    Analiz sonuçları ve raporlar bu e-mail adresine gönderilecektir.
                 </div>
-            </div>
-
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-number">Yapay Zeka Analizi</div>
-                    <div class="stat-label">Gelişmiş makine öğrenmesi algoritmaları ile yüksek doğrulama insan tespiti</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">Anlık Uyarı</div>
-                    <div class="stat-label">Şüpheli aktivite tespit edildiğinde anında bildirim ve uyarı sistemi</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">Video Analizi</div>
-                    <div class="stat-label">Gerçek zamanlı video akışı analizi ve hareket takibi</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">Akıllı Sonuç Analizi</div>
-                    <div class="stat-label">LLM tabanlı yorumlama ile güvenlik verileri kolay anlaşılır raporlara dönüştürülür.</div>
-                </div>
-            </div>
-
-            <div class="alert-custom">
-                <i class="fas fa-info-circle me-2" style="color: var(--accent-blue);"></i>
-                <strong>Sistem Bilgisi:</strong> Tüm güvenlik kameraları aktif durumda ve AI algoritması çalışmaktadır. 
-                Anormal aktivite tespit edildiğinde otomatik olarak alarm sistemi devreye girecek ve kayıtlar veritabanına işlenecektir.
             </div>
         </div>
     </div>
@@ -256,6 +127,6 @@
     <div id="notificationContainer"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='scripts.js') }}"></script>
+    <script src="{{ url_for('static', filename='login.js') }}"></script>
 </body>
 </html>
