@@ -1,0 +1,394 @@
+/* ============= KAYITLAR SAYFASI ÖZELLEŞTİRMELERİ ============= */
+
+.records-container {
+    max-height: 500px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.record-item {
+    background: rgba(74, 144, 226, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+}
+
+.record-item:hover {
+    background: rgba(74, 144, 226, 0.1);
+    border-color: var(--accent-blue);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(74, 144, 226, 0.2);
+}
+
+.record-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.record-details {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+/* Durum İndikators */
+.verified {
+    color: var(--success-color);
+    font-weight: 600;
+}
+
+.not-verified {
+    color: var(--danger-color);
+    font-weight: 600;
+}
+
+.code-used {
+    color: var(--success-color);
+    font-weight: 600;
+}
+
+.code-pending {
+    color: var(--warning-color);
+    font-weight: 600;
+}
+
+.code-expired {
+    color: var(--danger-color);
+    font-weight: 600;
+}
+
+/* Kod Görünümü */
+.code-display {
+    background: var(--accent-blue);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+}
+
+/* Admin Badge */
+.admin-badge {
+    background: linear-gradient(135deg, var(--warning-color), var(--accent-blue));
+    color: white;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-left: 10px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* Loading ve No Data */
+.loading-indicator {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-muted);
+}
+
+.no-data {
+    text-align: center;
+    padding: 30px;
+    color: var(--text-muted);
+    font-style: italic;
+    background: rgba(74, 144, 226, 0.05);
+    border: 1px dashed var(--border-color);
+    border-radius: 10px;
+}
+
+/* Active Navigation */
+.nav-link.active {
+    color: var(--accent-light-blue) !important;
+    font-weight: 700;
+    position: relative;
+}
+
+.nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 30px;
+    height: 2px;
+    background: var(--accent-light-blue);
+    border-radius: 2px;
+}
+
+/* Scrollbar Styling */
+.records-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.records-container::-webkit-scrollbar-track {
+    background: var(--border-color);
+    border-radius: 3px;
+}
+
+.records-container::-webkit-scrollbar-thumb {
+    background: var(--accent-blue);
+    border-radius: 3px;
+}
+
+.records-container::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-light-blue);
+}
+
+/* İstatistik Kartları Animasyonu */
+.stat-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transition: left 0.6s;
+}
+
+.stat-card:hover::before {
+    left: 100%;
+}
+
+/* Record Item Animasyonları */
+.record-item {
+    opacity: 0;
+    animation: fadeInUp 0.5s ease forwards;
+}
+
+.record-item:nth-child(1) { animation-delay: 0.1s; }
+.record-item:nth-child(2) { animation-delay: 0.2s; }
+.record-item:nth-child(3) { animation-delay: 0.3s; }
+.record-item:nth-child(4) { animation-delay: 0.4s; }
+.record-item:nth-child(5) { animation-delay: 0.5s; }
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Button Hover Effects */
+.btn-custom {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-custom::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s, height 0.3s;
+}
+
+.btn-custom:hover::before {
+    width: 300px;
+    height: 300px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .records-container {
+        max-height: 400px;
+    }
+    
+    .record-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+    
+    .admin-badge {
+        margin-left: 0;
+        margin-top: 5px;
+    }
+    
+    .code-display {
+        margin-top: 5px;
+    }
+    
+    .stat-card .stat-number {
+        font-size: 1.5rem;
+    }
+    
+    .stat-card .stat-label {
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .records-container {
+        max-height: 350px;
+    }
+    
+    .record-item {
+        padding: 12px;
+    }
+    
+    .record-details {
+        font-size: 0.8rem;
+    }
+    
+    .code-display {
+        font-size: 0.8rem;
+        padding: 3px 6px;
+    }
+    
+    .admin-badge {
+        font-size: 0.7rem;
+        padding: 2px 6px;
+    }
+}
+
+/* Özel Alert Styles */
+.alert-custom {
+    border-left: 4px solid var(--warning-color);
+    position: relative;
+}
+
+.alert-custom::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, transparent, rgba(255,193,7,0.1), transparent);
+    pointer-events: none;
+}
+
+/* Loading Spinner Animation */
+.fa-spinner.fa-spin {
+    color: var(--accent-blue);
+}
+
+/* Email Mask Effect (opsiyonel) */
+.email-masked {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+}
+
+/* Status Pills */
+.status-pill {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-pill.success {
+    background: rgba(40, 167, 69, 0.2);
+    color: var(--success-color);
+    border: 1px solid rgba(40, 167, 69, 0.3);
+}
+
+.status-pill.warning {
+    background: rgba(255, 193, 7, 0.2);
+    color: var(--warning-color);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.status-pill.danger {
+    background: rgba(220, 53, 69, 0.2);
+    color: var(--danger-color);
+    border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+/* Tooltip Styles */
+.tooltip-custom {
+    position: relative;
+    cursor: help;
+}
+
+.tooltip-custom::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--secondary-bg);
+    color: var(--text-primary);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+    z-index: 1000;
+}
+
+.tooltip-custom:hover::after {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Search Box (gelecekte eklenebilir) */
+.search-box {
+    background: rgba(74, 144, 226, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 10px 15px;
+    color: var(--text-primary);
+    margin-bottom: 15px;
+    transition: all 0.3s ease;
+}
+
+.search-box:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    background: rgba(74, 144, 226, 0.1);
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+}
+
+/* Export Button Loading State */
+.btn-exporting {
+    position: relative;
+    color: transparent !important;
+}
+
+.btn-exporting::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    color: white;
+}
+
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}

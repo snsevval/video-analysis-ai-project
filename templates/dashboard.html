@@ -14,15 +14,17 @@
     
     <div class="container-fluid">
         <div class="main-container">
+            <!-- GÜNCELLENMİŞ NAVBAR - Admin linki eklendi -->
             <nav class="navbar navbar-expand-lg">
                 <div class="container-fluid">
                     <a class="navbar-brand" href="#">
                         <i class="fas fa-shield-alt me-2"></i>SecurityVision
                     </a>
                     <div class="navbar-nav ms-auto">
-                        <a class="nav-link" href="#"><i class="fas fa-home me-1"></i>Ana Sayfa</a>
-                        <a class="nav-link" href="#"><i class="fas fa-database me-1"></i>Kayıtlar</a>
+                        <a class="nav-link" href="/dashboard"><i class="fas fa-home me-1"></i>Ana Sayfa</a>
+                        <a class="nav-link" href="/kayitlar" id="kayitlarLink" style="display: none;"><i class="fas fa-database me-1"></i>Kayıtlar</a>
                         <a class="nav-link" href="#"><i class="fas fa-cog me-1"></i>Ayarlar</a>
+                        <a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt me-1"></i>Çıkış (<span id="userEmail">-</span>)</a>
                     </div>
                 </div>
             </nav>
@@ -238,5 +240,19 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='scripts.js') }}"></script>
+    <script src="{{ url_for('static', filename='admin-control.js') }}"></script>
+
+    
+    <!-- GÜNCELLENMİŞ SCRIPT - Admin kontrolü eklendi -->
+    <script>
+    // Mevcut DOMContentLoaded event listener'ınızı bu şekilde güncelleyin
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeEventListeners(); // Mevcut kodunuz
+        updateSystemStatus(); // Mevcut kodunuz
+        // checkAdminStatus(); // YENİ: Admin kontrolü
+    });
+
+
+    </script>
 </body>
 </html>

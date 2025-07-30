@@ -165,7 +165,7 @@ function checkStatus() {
             const status = data.data;
             updateAnalysisStatus(status);
             
-            if (status.status === 'completed') {  // ← BU SATIRI DEĞİŞTİRDİNİZ
+            if (status.status === 'completed') {  
                 clearInterval(pollInterval);
                 showResults(status);
                 isProcessing = false;
