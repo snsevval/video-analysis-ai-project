@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, render_template, send_file, url_for, 
 from werkzeug.utils import secure_filename
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 import threading
 import requests
 import json
@@ -13,33 +13,36 @@ import random
 import string
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import timedelta  # Bu zaten var mı kontrol et
 from process import analyze_video  
 import io
 import zipfile
 import tempfile
 from email.mime.application import MIMEApplication
-import os
 from dotenv import load_dotenv
+from functools import wraps
 
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
-load_dotenv()  # .env dosyasını yükle
+app.secret_key = os.getenv('SECRET_KEY', 'securityvision-fallback-key')
 
-app.secret_key = os.getenv('SECRET_KEY')
-
-# gizle
-SMTP_SERVER = os.getenv('SMTP_SERVER')
-SMTP_PORT = int(os.getenv('SMTP_PORT'))
+# Email Configuration
+SMTP_SERVER = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
+SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
 EMAIL_ADDRESS = os.getenv('EMAIL_ADDRESS')
 EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
 
-# Configuration
+# Admin Configuration
+ADMIN_EMAILS_STR = os.getenv('ADMIN_EMAILS', EMAIL_ADDRESS or 'admin@securityvision.com')
+ADMIN_EMAILS = [email.strip() for email in ADMIN_EMAILS_STR.split(',') if email.strip()]
+
+# App Configuration
 UPLOAD_FOLDER = 'uploads'
 OUTPUT_FOLDER = 'outputs'
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'wmv', 'flv', 'webm'}
 
-# Klasörleri oluştur
+# Create directories
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 os.makedirs('static', exist_ok=True)
@@ -47,17 +50,71 @@ os.makedirs('templates', exist_ok=True)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['OUTPUT_FOLDER'] = OUTPUT_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB max file size
+app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB
 
-# Global dictionary to track processing status
+# Global variables
 processing_status = {}
-# ============= DATABASE INITIALIZATION =============
+
+# ============= HELPER FUNCTIONS =============
+def is_admin(email):
+    """Check if email is admin"""
+    return email in ADMIN_EMAILS
+
+def admin_required(f):
+    """Decorator for admin-only routes"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_email' not in session:
+            return jsonify({'error': 'Login required'}), 401
+        
+        user_email = session.get('user_email')
+        if not is_admin(user_email):
+            print(f"❌ Admin access denied: {user_email}")
+            return jsonify({'error': 'Admin access required'}), 403
+        
+        print(f"✅ Admin access granted: {user_email}")
+        return f(*args, **kwargs)
+    
+    return decorated_function
+
+def allowed_file(filename):
+    """Check if file extension is allowed"""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def save_login_log(email, status, ip_address):
+    """Save login log to database"""
+    try:
+        conn = sqlite3.connect('securityvision_users.db')
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS login_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT NOT NULL,
+                status TEXT NOT NULL,
+                ip_address TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        cursor.execute('''
+            INSERT INTO login_logs (email, status, ip_address)
+            VALUES (?, ?, ?)
+        ''', (email, status, ip_address))
+        
+        conn.commit()
+        conn.close()
+        print(f"✅ Login log saved: {email} - {status}")
+    except Exception as e:
+        print(f"❌ Login log error: {e}")
+
+# ============= DATABASE FUNCTIONS =============
 def init_db():
-    """Veritabanını başlat - Users ve Verification codes"""
+    """Initialize database"""
     conn = sqlite3.connect('securityvision_users.db')
     cursor = conn.cursor()
     
-    # Users tablosu
+    # Users table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,7 +125,7 @@ def init_db():
         )
     ''')
     
-    # Verification codes tablosu
+    # Verification codes table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS verification_codes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -80,35 +137,45 @@ def init_db():
         )
     ''')
     
+    # Login logs table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS login_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            status TEXT NOT NULL,
+            ip_address TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
     conn.commit()
     conn.close()
     print("✅ Database initialized")
-    
-# ============= EMAIL VERIFICATION FUNCTIONS =============
+
 def generate_verification_code():
-    """6 haneli doğrulama kodu oluştur"""
+    """Generate 6-digit verification code"""
     return ''.join(random.choices(string.digits, k=6))
 
 def send_verification_email(email, code):
-    """Doğrulama kodunu email ile gönder"""
+    """Send verification code via email"""
     try:
         msg = MIMEMultipart()
         msg['From'] = EMAIL_ADDRESS
         msg['To'] = email
-        msg['Subject'] = 'SecurityVision - Email Doğrulama Kodu'
+        msg['Subject'] = 'SecurityVision - Email Verification Code'
         
         body = f"""
-Merhaba,
+Hello,
 
-SecurityVision sistemine giriş yapmak için aşağıdaki doğrulama kodunu kullanın:
+Use the following verification code to login to SecurityVision:
 
-🔐 Doğrulama Kodu: {code}
+🔐 Verification Code: {code}
 
-Bu kod 10 dakika geçerlidir.
+This code is valid for 10 minutes.
 
-Eğer bu işlemi siz yapmadıysanız, bu emaili görmezden gelebilirsiniz.
+If you didn't request this, please ignore this email.
 
-SecurityVision Güvenlik Sistemi
+SecurityVision Security System
         """
         
         msg.attach(MIMEText(body, 'plain', 'utf-8'))
@@ -126,13 +193,14 @@ SecurityVision Güvenlik Sistemi
         return False
 
 def save_verification_code(email, code):
-    """Doğrulama kodunu veritabanına kaydet"""
+    """Save verification code to database"""
     conn = sqlite3.connect('securityvision_users.db')
     cursor = conn.cursor()
-   
+    
+    # Delete old codes for this email
     cursor.execute('DELETE FROM verification_codes WHERE email = ?', (email,))
     
-    # Yeni kod ekle (10 dakika geçerli)
+    # Add new code (valid for 10 minutes)
     expires_at = datetime.now() + timedelta(minutes=10)
     cursor.execute('''
         INSERT INTO verification_codes (email, code, expires_at)
@@ -143,7 +211,7 @@ def save_verification_code(email, code):
     conn.close()
 
 def verify_code(email, code):
-    """Doğrulama kodunu kontrol et"""
+    """Verify the code"""
     conn = sqlite3.connect('securityvision_users.db')
     cursor = conn.cursor()
     
@@ -155,7 +223,7 @@ def verify_code(email, code):
     result = cursor.fetchone()
     
     if result:
-        # Kodu kullanıldı olarak işaretle
+        # Mark code as used
         cursor.execute('''
             UPDATE verification_codes 
             SET used = 1 
@@ -169,35 +237,30 @@ def verify_code(email, code):
     return False
 
 def create_or_update_user(email):
-    """Kullanıcıyı oluştur veya güncelle"""
+    """Create or update user"""
     conn = sqlite3.connect('securityvision_users.db')
     cursor = conn.cursor()
     
-    # Kullanıcı var mı kontrol et
+    # Check if user exists
     cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
     user = cursor.fetchone()
     
     if user:
-        # Mevcut kullanıcıyı doğrulanmış olarak işaretle
+        # Update existing user
         cursor.execute('''
             UPDATE users 
             SET is_verified = 1, last_login = ? 
             WHERE email = ?
         ''', (datetime.now(), email))
     else:
-        # Yeni kullanıcı oluştur
+        # Create new user
         cursor.execute('''
             INSERT INTO users (email, is_verified, last_login)
             VALUES (?, 1, ?)
         ''', (email, datetime.now()))
     
     conn.commit()
-    conn.close()  
-
-def allowed_file(filename):
-    """Check if file extension is allowed"""
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+    conn.close()
 
 def progress_callback(task_id, progress):
     """Progress callback function"""
@@ -210,7 +273,6 @@ def analyze_video_background(task_id, video_path, output_dir):
         processing_status[task_id]['status'] = 'processing'
         processing_status[task_id]['message'] = 'Video analysis started...'
         
-        # Progress callback wrapper
         def progress_wrapper(progress):
             progress_callback(task_id, progress)
         
@@ -233,7 +295,9 @@ def analyze_video_background(task_id, video_path, output_dir):
         processing_status[task_id]['message'] = f'Error during analysis: {str(e)}'
         print(f"Background analysis error: {e}")
 
-# ============= LOGIN SYSTEM ROUTES =============
+# ============= ROUTES =============
+
+# Auth Routes
 @app.route('/')
 def index():
     """Login page"""
@@ -241,7 +305,7 @@ def index():
 
 @app.route('/send_verification', methods=['POST'])
 def send_verification():
-    """Email doğrulama kodu gönder - YENİ ROUTE"""
+    """Send verification code"""
     try:
         data = request.get_json()
         email = data.get('email')
@@ -249,117 +313,129 @@ def send_verification():
         if not email or '@' not in email or '.' not in email:
             return jsonify({
                 'success': False,
-                'message': 'Geçerli bir email adresi girin!'
+                'message': 'Please enter a valid email address!'
             }), 400
         
-        # Doğrulama kodu oluştur
+        # Generate and save code
         code = generate_verification_code()
         save_verification_code(email, code)
         
-        # Email gönder
+        # Send email
         if send_verification_email(email, code):
             session['temp_email'] = email
             return jsonify({
                 'success': True,
-                'message': 'Doğrulama kodu email adresinize gönderildi!'
+                'message': 'Verification code sent to your email!'
             })
         else:
             return jsonify({
                 'success': False,
-                'message': 'Email gönderilirken hata oluştu. Lütfen tekrar deneyin.'
+                'message': 'Failed to send email. Please try again.'
             }), 500
             
     except Exception as e:
         print(f"Send verification error: {e}")
         return jsonify({
             'success': False,
-            'message': 'Beklenmeyen hata oluştu.'
+            'message': 'An unexpected error occurred.'
         }), 500
 
 @app.route('/verify_and_login', methods=['POST'])
 def verify_and_login():
-    """Doğrulama kodunu kontrol et ve giriş yap - YENİ ROUTE"""
+    """Verify code and login"""
     try:
         data = request.get_json()
         code = data.get('code')
         email = session.get('temp_email')
         
+        ip_address = request.environ.get('HTTP_X_FORWARDED_FOR', request.environ.get('REMOTE_ADDR', '127.0.0.1'))
+        
         if not email:
+            save_login_log('Unknown', 'failed', ip_address)
             return jsonify({
                 'success': False,
-                'message': 'Session süresi doldu. Lütfen tekrar deneyin.'
+                'message': 'Session expired. Please try again.'
             }), 400
         
         if not code:
+            save_login_log(email, 'failed', ip_address)
             return jsonify({
                 'success': False,
-                'message': 'Doğrulama kodunu girin!'
+                'message': 'Please enter the verification code!'
             }), 400
         
-        # Kodu doğrula
+        # Verify code
         if verify_code(email, code):
-            # Kullanıcıyı oluştur/güncelle
+            # Create/update user
             create_or_update_user(email)
             
-            # Session'a kaydet
+            # Create session
             session['user_email'] = email
             session['login_time'] = datetime.now().isoformat()
             session.pop('temp_email', None)
+            
+            # Log success
+            save_login_log(email, 'success', ip_address)
             
             print(f"✅ User verified and logged in: {email}")
             
             return jsonify({
                 'success': True,
-                'message': 'Doğrulama başarılı! Yönlendiriliyorsunuz...',
+                'message': 'Login successful! Redirecting...',
                 'redirect': url_for('dashboard')
             })
         else:
+            # Log failure
+            save_login_log(email, 'failed', ip_address)
             return jsonify({
                 'success': False,
-                'message': 'Geçersiz veya süresi dolmuş kod!'
+                'message': 'Invalid or expired code!'
             }), 400
             
     except Exception as e:
         print(f"Verify and login error: {e}")
+        save_login_log(email if 'email' in locals() else 'Unknown', 'error', 
+                      ip_address if 'ip_address' in locals() else '127.0.0.1')
         return jsonify({
             'success': False,
-            'message': 'Beklenmeyen hata oluştu.'
+            'message': 'An unexpected error occurred.'
         }), 500
 
 @app.route('/resend_code', methods=['POST'])
 def resend_code():
-    """Doğrulama kodunu yeniden gönder"""
+    """Resend verification code"""
     try:
         email = session.get('temp_email')
         
         if not email:
             return jsonify({
                 'success': False,
-                'message': 'Session süresi doldu. Lütfen tekrar deneyin.'
+                'message': 'Session expired. Please try again.'
             }), 400
         
-        # Yeni kod oluştur
+        # Generate new code
         code = generate_verification_code()
         save_verification_code(email, code)
         
-        # Email gönder
+        # Send email
         if send_verification_email(email, code):
             return jsonify({
                 'success': True,
-                'message': 'Yeni doğrulama kodu gönderildi!'
+                'message': 'New verification code sent!'
             })
         else:
             return jsonify({
                 'success': False,
-                'message': 'Email gönderilirken hata oluştu.'
+                'message': 'Failed to send email.'
             }), 500
             
     except Exception as e:
         print(f"Resend code error: {e}")
         return jsonify({
             'success': False,
-            'message': 'Beklenmeyen hata oluştu.'
+            'message': 'An unexpected error occurred.'
         }), 500
+
 @app.route('/logout')
 def logout():
     """Handle logout"""
@@ -370,7 +446,7 @@ def logout():
 
 @app.route('/dashboard')
 def dashboard():
-    """Main SecurityVision page - requires login"""
+    """Main dashboard - requires login"""
     if 'user_email' not in session:
         print("❌ Unauthorized access attempt to dashboard")
         return redirect(url_for('index'))
@@ -379,11 +455,137 @@ def dashboard():
     print(f"✅ Dashboard access: {user_email}")
     return render_template('dashboard.html')
 
-# ============= VIDEO ANALYSIS ROUTES =============
+# Admin Routes
+@app.route('/kayitlar')
+@admin_required
+def kayitlar():
+    """Records page - admin only"""
+    return render_template('kayitlar.html')
+
+@app.route('/check_admin_status')
+def check_admin_status():
+    """Check if user is admin"""
+    if 'user_email' not in session:
+        return jsonify({
+            'logged_in': False, 
+            'is_admin': False
+        })
+    
+    user_email = session.get('user_email')
+    return jsonify({
+        'logged_in': True,
+        'email': user_email,
+        'is_admin': is_admin(user_email),
+        'admin_emails': ADMIN_EMAILS if is_admin(user_email) else []
+    })
+
+@app.route('/admin/users_data')
+@admin_required
+def admin_users_data():
+    """Get user data for admin"""
+    try:
+        conn = sqlite3.connect('securityvision_users.db')
+        cursor = conn.cursor()
+        
+        # Get users
+        cursor.execute("""
+            SELECT email, is_verified, last_login, created_at
+            FROM users 
+            ORDER BY created_at DESC
+        """)
+        users = cursor.fetchall()
+        
+        # Get verification codes
+        cursor.execute("""
+            SELECT email, code, expires_at, used, created_at
+            FROM verification_codes 
+            ORDER BY created_at DESC 
+            LIMIT 50
+        """)
+        codes = cursor.fetchall()
+        
+        # Get statistics
+        cursor.execute("SELECT COUNT(*) FROM users")
+        total_users = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM users WHERE is_verified = 1")
+        verified_users = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM verification_codes WHERE created_at LIKE ?", 
+                      (f'{datetime.now().strftime("%Y-%m-%d")}%',))
+        today_codes = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM users WHERE last_login LIKE ?", 
+                      (f'{datetime.now().strftime("%Y-%m-%d")}%',))
+        today_logins = cursor.fetchone()[0]
+        
+        conn.close()
+        
+        return jsonify({
+            'users': [
+                {
+                    'email': user[0],
+                    'verified': bool(user[1]),
+                    'last_login': user[2],
+                    'created_at': user[3],
+                    'is_admin': is_admin(user[0])
+                } for user in users
+            ],
+            'codes': [
+                {
+                    'email': code[0],
+                    'code': code[1],
+                    'expires_at': code[2],
+                    'used': bool(code[3]),
+                    'created_at': code[4]
+                } for code in codes
+            ],
+            'stats': {
+                'total_users': total_users,
+                'verified_users': verified_users,
+                'today_codes': today_codes,
+                'today_logins': today_logins,
+                'admin_count': len(ADMIN_EMAILS)
+            },
+            'current_admin': session.get('user_email'),
+            'admin_emails': ADMIN_EMAILS
+        })
+        
+    except Exception as e:
+        print(f"❌ Admin users data error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/admin/cleanup_old_codes', methods=['POST'])
+@admin_required
+def cleanup_old_codes():
+    """Clean up old verification codes"""
+    try:
+        conn = sqlite3.connect('securityvision_users.db')
+        cursor = conn.cursor()
+        
+        # Delete codes older than 24 hours
+        yesterday = datetime.now() - timedelta(days=1)
+        cursor.execute("DELETE FROM verification_codes WHERE created_at < ?", (yesterday,))
+        deleted_count = cursor.rowcount
+        
+        conn.commit()
+        conn.close()
+        
+        print(f"🧹 Admin cleanup: {deleted_count} old codes deleted by {session.get('user_email')}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'{deleted_count} old codes cleaned up'
+        })
+        
+    except Exception as e:
+        print(f"❌ Cleanup error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Video Analysis Routes
 @app.route('/upload', methods=['POST'])
 def upload_video():
     """Handle video upload and start analysis"""
-    # Session kontrolü
     if 'user_email' not in session:
         return jsonify({
             'success': False,
@@ -391,7 +593,6 @@ def upload_video():
         }), 401
     
     try:
-        # Check if file is present
         if 'video' not in request.files:
             return jsonify({
                 'success': False,
@@ -400,14 +601,12 @@ def upload_video():
 
         file = request.files['video']
         
-        # Check if file is selected
         if file.filename == '':
             return jsonify({
                 'success': False,
                 'message': 'No video file selected'
             }), 400
 
-        # Check file extension
         if not allowed_file(file.filename):
             return jsonify({
                 'success': False,
@@ -424,7 +623,7 @@ def upload_video():
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
         
-        # Create output directory for this task
+        # Create output directory
         output_dir = os.path.join(app.config['OUTPUT_FOLDER'], task_id)
         os.makedirs(output_dir, exist_ok=True)
         
@@ -435,7 +634,7 @@ def upload_video():
             'message': 'Video uploaded successfully, starting analysis...',
             'filename': filename,
             'task_id': task_id,
-            'user_email': session.get('user_email'),  # Kullanıcı bilgisi ekle
+            'user_email': session.get('user_email'),
             'start_time': datetime.now().isoformat()
         }
         
@@ -466,7 +665,6 @@ def upload_video():
 @app.route('/status/<task_id>')
 def get_status(task_id):
     """Get analysis status"""
-    # Session kontrolü
     if 'user_email' not in session:
         return jsonify({
             'success': False,
@@ -483,7 +681,6 @@ def get_status(task_id):
     
     # Add download links if completed
     if status['status'] == 'completed' and 'result' in status:
-        result = status['result']
         status['download_links'] = {
             'video': url_for('download_video', task_id=task_id),
             'database': url_for('download_database', task_id=task_id)
@@ -497,7 +694,6 @@ def get_status(task_id):
 @app.route('/download/video/<task_id>')
 def download_video(task_id):
     """Download analyzed video"""
-    # Session kontrolü
     if 'user_email' not in session:
         return jsonify({'error': 'Login required'}), 401
     
@@ -521,7 +717,6 @@ def download_video(task_id):
 @app.route('/download/database/<task_id>')
 def download_database(task_id):
     """Download analysis database"""
-    # Session kontrolü
     if 'user_email' not in session:
         return jsonify({'error': 'Login required'}), 401
     
@@ -542,455 +737,21 @@ def download_database(task_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/results/<task_id>')
-def get_results(task_id):
-    """Get detailed analysis results"""
-    # Session kontrolü
+# Utility Routes
+@app.route('/user_info')
+def user_info():
+    """Get current user info"""
     if 'user_email' not in session:
-        return jsonify({
-            'success': False,
-            'message': 'Login required'
-        }), 401
+        return jsonify({'logged_in': False})
     
-    if task_id not in processing_status:
-        return jsonify({
-            'success': False,
-            'message': 'Task not found'
-        }), 404
-    
-    status = processing_status[task_id]
-    if status['status'] != 'completed':
-        return jsonify({
-            'success': False,
-            'message': 'Analysis not completed yet'
-        }), 400
-    
+    user_email = session.get('user_email')
     return jsonify({
-        'success': True,
-        'data': status['result']
+        'logged_in': True,
+        'email': user_email,
+        'login_time': session.get('login_time'),
+        'is_admin': is_admin(user_email)
     })
 
-@app.route('/cleanup/<task_id>', methods=['DELETE'])
-def cleanup_task(task_id):
-    """Clean up task files and data"""
-    # Session kontrolü
-    if 'user_email' not in session:
-        return jsonify({'error': 'Login required'}), 401
-    
-    try:
-        if task_id in processing_status:
-            # Delete uploaded video
-            if 'filename' in processing_status[task_id]:
-                file_path = os.path.join(app.config['UPLOAD_FOLDER'], processing_status[task_id]['filename'])
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-            
-            # Delete output directory
-            output_dir = os.path.join(app.config['OUTPUT_FOLDER'], task_id)
-            if os.path.exists(output_dir):
-                import shutil
-                shutil.rmtree(output_dir)
-            
-            # Remove from memory
-            del processing_status[task_id]
-            
-            print(f"🗑️ Task cleaned up by {session.get('user_email')}: {task_id}")
-            
-            return jsonify({
-                'success': True,
-                'message': 'Task cleaned up successfully'
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'message': 'Task not found'
-            }), 404
-            
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Cleanup failed: {str(e)}'
-        }), 500
-
-# ============= LLM RAPOR SİSTEMİ =============
-@app.route('/generate_report', methods=['POST'])
-def generate_report():
-    """ANA SAYFA için LLM raporu oluştur"""
-    # Session kontrolü
-    if 'user_email' not in session:
-        return jsonify({'error': 'Login required'}), 401
-    
-    try:
-        data = request.get_json()
-        db_file = data.get('db_file')
-        
-        if not db_file:
-            return jsonify({'error': 'Database file not specified'}), 400
-        
-        print(f"🤖 LLM Report request by {session.get('user_email')}: {db_file}")
-        
-        # Ana sayfa formatı: "task_id/analysis.db" veya "task_id/alarm_analysis.db"
-        if '/' in db_file:
-            # "e4e0cd34-f23b-4324-84b7-06ba2b7e343e/analysis.db" formatı
-            db_path = os.path.join(OUTPUT_FOLDER, db_file)
-        else:
-            # Sadece task_id verilmiş, database dosyasını ara
-            task_folder = os.path.join(OUTPUT_FOLDER, db_file)
-            possible_files = ['analysis.db', 'alarm_analysis.db']
-            db_path = None
-            
-            for filename in possible_files:
-                test_path = os.path.join(task_folder, filename)
-                if os.path.exists(test_path):
-                    db_path = test_path
-                    break
-        
-        print(f"Aranan path: {db_path}")
-        
-        if not db_path or not os.path.exists(db_path):
-            return jsonify({'error': f'Database file not found: {db_path}'}), 404
-        
-        print(f"Database analizi başlıyor...")
-        data_summary = analyze_database(db_path)
-        print(f"Database analizi tamamlandı: {len(data_summary.get('detailed_alarms', []))} alarm")
-
-        print(f"LLM raporu başlıyor...")
-        report = generate_llm_report(data_summary)
-        print(f"LLM raporu tamamlandı: {len(report)} karakter")
-        
-        # ZIP oluştur ve email gönder
-        user_email = session.get('user_email')
-        if user_email:
-            create_and_send_results_zip(user_email, db_file.split('/')[0], report, {
-                'total_alarms': data_summary['total_alarms'],
-                'video_duration': data_summary['video_duration'], 
-                'critical_moments': len(data_summary['critical_moments'])
-            })
-            print(f"📦 ZIP results sent to {user_email}")
-        
-        return jsonify({
-            'success': True,
-            'report': report,
-            'db_file': db_file,
-            'stats': {
-                'total_alarms': data_summary['total_alarms'],
-                'video_duration': data_summary['video_duration'],
-                'critical_moments': len(data_summary['critical_moments'])
-            }
-        })
-        
-    except Exception as e:
-        print(f"LLM Report Error: {e}")
-        return jsonify({'error': str(e)}), 500
-
-def analyze_database(db_path):
-    """Database'i DETAYLI analiz et - kişi bazlı alarm verisi"""
-    conn = sqlite3.connect(db_path)
-    cursor = conn.cursor()
-    
-    try:
-        # 1. GENEL İSTATİSTİKLER
-        cursor.execute("SELECT COUNT(*) FROM video_analysis")
-        total_frames = cursor.fetchone()[0]
-        
-        cursor.execute("SELECT COUNT(*) FROM alarm_events")
-        total_alarms = cursor.fetchone()[0]
-        
-        cursor.execute("SELECT MIN(timestamp), MAX(timestamp) FROM video_analysis")
-        time_range = cursor.fetchone()
-        video_duration = time_range[1] - time_range[0] if time_range[0] and time_range[1] else 0
-        
-        # 2. DETAYLI ALARM ANALİZİ (zaman + kişi + sebep)
-        cursor.execute("""
-            SELECT 
-                ae.timestamp,
-                ae.formatted_time,
-                ae.dangerous_person_id,
-                ae.dangerous_person_emotion,
-                ae.dangerous_person_speed,
-                ae.alarm_reason,
-                ae.danger_level,
-                ae.nearby_persons
-            FROM alarm_events ae
-            ORDER BY ae.timestamp
-        """)
-        
-        detailed_alarms = []
-        for row in cursor.fetchall():
-            nearby_list = eval(row[7]) if row[7] and row[7] != '[]' else []
-            detailed_alarms.append({
-                'time': row[1],  # formatted_time
-                'timestamp': row[0],
-                'person_id': row[2],
-                'emotion': row[3],
-                'speed': round(row[4], 1) if row[4] else 0,
-                'reason': row[5],
-                'danger_level': row[6],
-                'nearby_count': len(nearby_list),
-                'nearby_persons': nearby_list
-            })
-        
-        # 3. KRİTİK ANLAR (Danger Level >= 7)
-        cursor.execute("""
-            SELECT 
-                ae.formatted_time,
-                ae.dangerous_person_emotion,
-                ae.dangerous_person_speed,
-                ae.danger_level,
-                ae.alarm_reason,
-                ae.nearby_persons
-            FROM alarm_events ae
-            WHERE ae.danger_level >= 7
-            ORDER BY ae.danger_level DESC, ae.timestamp
-        """)
-        
-        critical_moments = []
-        for row in cursor.fetchall():
-            nearby_list = eval(row[5]) if row[5] and row[5] != '[]' else []
-            critical_moments.append({
-                'time': row[0],
-                'emotion': row[1],
-                'speed': round(row[2], 1) if row[2] else 0,
-                'danger_level': row[3],
-                'reason': row[4],
-                'nearby_count': len(nearby_list)
-            })
-        
-        # 4. DUYGU BAZLI İSTATİSTİKLER
-        cursor.execute("""
-            SELECT 
-                dangerous_person_emotion,
-                COUNT(*) as count,
-                AVG(danger_level) as avg_danger,
-                MAX(danger_level) as max_danger
-            FROM alarm_events
-            GROUP BY dangerous_person_emotion
-            ORDER BY count DESC
-        """)
-        
-        emotion_stats = {}
-        for row in cursor.fetchall():
-            emotion_stats[row[0]] = {
-                'count': row[1],
-                'avg_danger': round(row[2], 1),
-                'max_danger': row[3]
-            }
-        
-        # 5. ZAMAN BAZLI PATTERN ANALİZİ
-        cursor.execute("""
-            SELECT 
-                CAST(timestamp AS INTEGER) as second,
-                COUNT(*) as alarm_count,
-                MAX(danger_level) as max_danger
-            FROM alarm_events
-            GROUP BY CAST(timestamp AS INTEGER)
-            HAVING alarm_count > 1
-            ORDER BY alarm_count DESC
-            LIMIT 5
-        """)
-        
-        time_patterns = []
-        for row in cursor.fetchall():
-            time_patterns.append({
-                'second': row[0],
-                'time_formatted': f"{row[0]//60:02d}:{row[0]%60:02d}",
-                'alarm_count': row[1],
-                'max_danger': row[2]
-            })
-        
-        return {
-            'total_frames': total_frames,
-            'total_alarms': total_alarms,
-            'video_duration': video_duration,
-            'detailed_alarms': detailed_alarms,
-            'critical_moments': critical_moments,
-            'emotion_stats': emotion_stats,
-            'time_patterns': time_patterns
-        }
-        
-    finally:
-        conn.close()
-
-def generate_llm_report(data_summary):
-    """Kısa DURUM RAPORU - Alarm odaklı"""
-    
-    prompt = f"""
-Video güvenlik durum raporu hazırla.
-
-GENEL DURUM:
-- Video süresi: {data_summary['video_duration']:.0f} saniye
-- Toplam alarm: {data_summary['total_alarms']} adet
-- Kritik durum: {len(data_summary['critical_moments'])} adet
-
-ALARM DETAYLARI:
-"""
-    
-    # Alarm detaylarını ekle
-    for i, alarm in enumerate(data_summary['detailed_alarms'][:5], 1):
-        prompt += f"""
-{alarm['time']} - Kişi ID: {alarm['person_id']} | Duygu: {alarm['emotion']} | Hız: {alarm['speed']:.0f} | Tehlike: {alarm['danger_level']} | Yakında: {alarm['nearby_count']} kişi
-"""
-
-    prompt += f"""
-
-KRITIK ANLAR:
-"""
-    
-    for moment in data_summary['critical_moments'][:3]:
-        prompt += f"{moment['time']} - {moment['emotion']} duygu, {moment['speed']:.0f} hız, seviye {moment['danger_level']}, {moment['nearby_count']} kişi yakında\n"
-
-    prompt += f"""
-
-RAPOR İSTEĞİ:
-Zaman sırasına göre alarm durumlarını analiz et. Hangi zaman aralıklarında yoğunluk var? Tekrarlayan pattern var mı? Kısa ve net durum raporu ver.
-
-Türkçe, 2-3 paragraf.
-"""
-
-    try:
-        response = requests.post('http://localhost:11434/api/generate', 
-                               json={
-                                   'model': 'llama3.2:3b',
-                                   'prompt': prompt,
-                                   'stream': False
-                               },
-                               timeout=10000)
-        
-        if response.status_code == 200:
-            result = response.json()
-            return result['response']
-        else:
-            return f"LLM API Hatası: {response.status_code} - {response.text}"
-            
-    except requests.exceptions.RequestException as e:
-        return f"🔌 Bağlantı Hatası: Ollama sunucusu çalışmıyor olabilir.\n\nHata: {str(e)}\n\nÇözüm:\n1. Yeni terminal açın\n2. 'ollama serve' komutunu çalıştırın\n3. Tekrar deneyin"
-    except Exception as e:
-        return f"Beklenmeyen Hata: {str(e)}"
- 
-def create_and_send_results_zip(user_email, task_id, report_content, stats):
-    """3 dosyayı zipleyip email ile gönder"""
-    try:
-        # Dosya yolları
-        output_dir = os.path.join(OUTPUT_FOLDER, task_id)
-        video_file = None
-        db_file = None
-        
-        # Video dosyasını bul
-        for file in os.listdir(output_dir):
-            if file.endswith('.mp4'):
-                video_file = os.path.join(output_dir, file)
-                break
-        
-        # Database dosyasını bul
-        for file in os.listdir(output_dir):
-            if file.endswith('.db'):
-                db_file = os.path.join(output_dir, file)
-                break
-        
-        if not video_file or not db_file:
-            print(f"❌ Video veya DB dosyası bulunamadı: {output_dir}")
-            return False
-        
-        # TXT raporu oluştur
-        txt_content = f"""🤖 SECURITYVISION LLM GÜVENLİK RAPORU
-=====================================
-Oluşturma Tarihi: {datetime.now().strftime('%d.%m.%Y %H:%M')}
-Analiz ID: {task_id}
-
-📊 İSTATİSTİKLER:
-- Toplam Alarm: {stats.get('total_alarms', 0)}
-- Video Süresi: {stats.get('video_duration', 0):.0f} saniye
-- Kritik Durum: {stats.get('critical_moments', 0)}
-
-📝 DETAYLI ANALİZ:
-{report_content}
-
-=====================================
-Bu rapor SecurityVision Video Güvenlik & Tehlike Tespit Sistemi 
-tarafından yapay zeka ile otomatik olarak oluşturulmuştur.
-"""
-        
-        # Geçici ZIP dosyası oluştur
-        with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as temp_zip:
-            zip_path = temp_zip.name
-            
-            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                # Video ekle
-                zipf.write(video_file, f'SecurityVision_Video_{task_id[:8]}.mp4')
-                
-                # Database ekle
-                zipf.write(db_file, f'SecurityVision_Database_{task_id[:8]}.db')
-                
-                # TXT raporu ekle
-                zipf.writestr(f'SecurityVision_Rapor_{task_id[:8]}.txt', txt_content)
-        
-        # Email gönder
-        if send_zip_email(user_email, zip_path, task_id, stats):
-            os.unlink(zip_path)  # Geçici zip dosyasını sil
-            return True
-        else:
-            os.unlink(zip_path)
-            return False
-            
-    except Exception as e:
-        print(f"❌ ZIP creation error: {e}")
-        return False
-
-def send_zip_email(user_email, zip_path, task_id, stats):
-    """ZIP dosyasını email ile gönder"""
-    try:
-        msg = MIMEMultipart()
-        msg['From'] = EMAIL_ADDRESS
-        msg['To'] = user_email
-        msg['Subject'] = f'SecurityVision - Video Analiz Sonuçları ({task_id[:8]})'
-        
-        # Email body
-        body = f"""
-Merhaba,
-
-SecurityVision video analiziniz başarıyla tamamlandı! 🎉
-
-📊 ÖZET:
-- Analiz ID: {task_id[:8]}...
-- Toplam Alarm: {stats.get('total_alarms', 0)}
-- Video Süresi: {stats.get('video_duration', 0):.0f} saniye
-- Kritik Durum: {stats.get('critical_moments', 0)}
-
-📎 EK DOSYALAR:
-Ekli ZIP dosyasında 3 adet sonuç dosyası bulunmaktadır:
-- Analiz edilmiş video (.mp4)
-- Detaylı veri tabanı (.db) 
-- LLM güvenlik raporu (.txt)
-
-İyi günler!
-SecurityVision Güvenlik Sistemi
-        """
-        
-        msg.attach(MIMEText(body, 'plain', 'utf-8'))
-        
-        # ZIP dosyasını ekle
-        with open(zip_path, 'rb') as f:
-            zip_data = f.read()
-            
-        zip_attachment = MIMEApplication(zip_data, _subtype='zip')
-        zip_attachment.add_header('Content-Disposition', 'attachment', 
-                                filename=f'SecurityVision_Results_{task_id[:8]}.zip')
-        msg.attach(zip_attachment)
-        
-        # Email gönder
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        server.starttls()
-        server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-        
-        print(f"📧 ZIP report sent to: {user_email}")
-        return True
-        
-    except Exception as e:
-        print(f"❌ ZIP email error: {e}")
-        return False
-# ============= UTILITY ROUTES =============
 @app.route('/health')
 def health_check():
     """Health check endpoint"""
@@ -1001,19 +762,7 @@ def health_check():
         'logged_in': 'user_email' in session
     })
 
-@app.route('/user_info')
-def user_info():
-    """Get current user info"""
-    if 'user_email' not in session:
-        return jsonify({'logged_in': False})
-    
-    return jsonify({
-        'logged_in': True,
-        'email': session.get('user_email'),
-        'login_time': session.get('login_time')
-    })
-
-# ============= ERROR HANDLERS =============
+# Error Handlers
 @app.errorhandler(413)
 def too_large(e):
     return jsonify({
@@ -1035,16 +784,20 @@ def unauthorized(e):
         'message': 'Login required'
     }), 401
 
+# ============= MAIN =============
 if __name__ == '__main__':
-    init_db()  # ← BU SATIRI EKLEYİN
+    init_db()
     print("🚀 SecurityVision Server Starting...")
     print("📁 Upload folder:", UPLOAD_FOLDER)
     print("📁 Output folder:", OUTPUT_FOLDER)
     print("🎥 Allowed formats:", ", ".join(ALLOWED_EXTENSIONS))
     print("💾 Max file size: 500MB")
     print("🔐 Login system: ENABLED")
+    print("👑 Admin system: ENABLED")
+    print(f"🔑 Admin emails: {ADMIN_EMAILS}")
     print("🌐 Server running on: http://localhost:5000")
     print("📧 Login page: http://localhost:5000/")
     print("🎛️ Dashboard: http://localhost:5000/dashboard")
+    print("📋 Admin records: http://localhost:5000/kayitlar")
     
     app.run(debug=True, host='0.0.0.0', port=5000)
