@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecurityVision - Kayıtlar</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='kayitlar.css') }}">
+</head>
+<body>
+    <div class="floating-particles"></div>
+    
+    <div class="container-fluid">
+        <div class="main-container">
+            <nav class="navbar navbar-expand-lg">
+                <div class="container-fluid">
+                    <a class="navbar-brand" href="#">
+                        <i class="fas fa-shield-alt me-2"></i>SecurityVision
+                    </a>
+                    <div class="navbar-nav ms-auto">
+                        <a class="nav-link" href="/dashboard"><i class="fas fa-home me-1"></i>Ana Sayfa</a>
+                        <a class="nav-link active" href="/kayitlar"><i class="fas fa-database me-1"></i>Kayıtlar</a>
+                        <a class="nav-link" href="#"><i class="fas fa-cog me-1"></i>Ayarlar</a>
+                        <a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt me-1"></i>Çıkış (<span id="userEmail">-</span>)</a>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="hero-section">
+                <h1 class="hero-title">
+                    <i class="fas fa-database me-3"></i>
+                    Sistem Kayıtları & Kullanıcı Yönetimi
+                </h1>
+                <p class="hero-subtitle">
+                    Kullanıcı girişleri, doğrulama kodları ve video analiz geçmişi
+                </p>
+            </div>
+
+            <!-- İstatistik Kartları -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalUsers">-</div>
+                    <div class="stat-label">Toplam Kullanıcı</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="verifiedUsers">-</div>
+                    <div class="stat-label">Doğrulanmış Kullanıcı</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="todayCodes">-</div>
+                    <div class="stat-label">Bugün Gönderilen Kod</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="activeUsers">-</div>
+                    <div class="stat-label">Bugün Aktif</div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Kullanıcı Listesi -->
+                <div class="col-lg-6">
+                    <div class="control-panel">
+                        <h5 class="section-title">
+                            <i class="fas fa-users me-2"></i>Kayıtlı Kullanıcılar
+                        </h5>
+                        
+                        <div id="usersList" class="records-container">
+                            <div class="loading-indicator">
+                                <i class="fas fa-spinner fa-spin me-2"></i>Veriler yükleniyor...
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button class="btn btn-secondary-custom btn-custom" onclick="refreshData()">
+                                <i class="fas fa-sync-alt me-2"></i>Yenile
+                            </button>
+                            <button class="btn btn-tertiary-custom btn-custom" onclick="exportUsers()">
+                                <i class="fas fa-download me-2"></i>Kullanıcıları İndir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Doğrulama Kodları -->
+                <div class="col-lg-6">
+                    <div class="control-panel">
+                        <h5 class="section-title">
+                            <i class="fas fa-key me-2"></i>Son Doğrulama Kodları
+                        </h5>
+                        
+                        <div id="codesList" class="records-container">
+                            <div class="loading-indicator">
+                                <i class="fas fa-spinner fa-spin me-2"></i>Veriler yükleniyor...
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <button class="btn btn-warning btn-custom" onclick="cleanOldCodes()">
+                                <i class="fas fa-trash me-2"></i>Eski Kodları Temizle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Analiz Geçmişi -->
+            <div class="control-panel">
+                <h5 class="section-title">
+                    <i class="fas fa-video me-2"></i>Video Analiz Geçmişi
+                </h5>
+                
+                <div id="analysisHistory" class="records-container">
+                    <div class="loading-indicator">
+                        <i class="fas fa-spinner fa-spin me-2"></i>Analiz geçmişi yükleniyor...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Bilgi -->
+            <div class="alert-custom">
+                <i class="fas fa-crown me-2" style="color: var(--warning-color);"></i>
+                <strong>Admin Paneli:</strong> Bu sayfaya sadece yetkili admin kullanıcıları erişebilir. 
+                Tüm kullanıcı aktiviteleri ve sistem logları burada görüntülenir.
+                <br><small>Mevcut admin: <span id="currentAdmin">-</span></small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='admin-control.js') }}"></script>
+    <script src="{{ url_for('static', filename='kayitlar.js') }}"></script>
+</body>
+</html>
