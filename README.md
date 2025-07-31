@@ -6,8 +6,11 @@ Bu proje, güvenlik ve izleme sektörü için geliştirilmiş tam entegre video 
 
 
 🎬 İşlenmiş Video Çıktı Özellikleri
+
 🎨 Görsel Analiz Overlay Sistemi
+
 Renkli Risk Seviyesi Kodlaması
+
 🟢 Yeşil (0-3): Güvenli durum - Normal kalınlık çerçeve
 🟡 Sarı (4-5): Dikkat gerektiren - Orta kalınlık çerçeve
 🟠 Turuncu (6-7): Tehlikeli durum - Kalın çerçeve
@@ -27,16 +30,20 @@ Multi-step Authentication: Email + token doğrulaması
 Session Management: Güvenli oturum yönetimi
 Auto-logout: Güvenlik için otomatik çıkış
 Rate Limiting: Brute force koruması
+
+
 🎨 Modern Responsive Tasarım
 HTML5 + CSS3 + Bootstrap Framework
 
 ⚡ Kullanıcı Deneyimi Özellikleri
+
 3 Adımlık Basit Süreç
 📁 Video Upload: Drag & drop dosya yükleme
 ▶️ Analysis: Tek tık ile analiz başlatma
 📥 Download: 3 dosyalı ZIP indirme
 
 👥 SSTAG AIMS Development Team
+
 Advanced Intelligence & Monitoring Systems
 
 🏢 Company: Enterprise AI Solutions Provider
