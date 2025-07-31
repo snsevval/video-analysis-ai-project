@@ -11,24 +11,12 @@ Bu proje, güvenlik ve izleme sektörü için geliştirilmiş tam entegre video 
 
 🔬 Gelişmiş Görüntü İşleme Teknolojileri
 🧠 Multi-Layer Computer Vision Pipeline
-OpenCV ile Temel Video İşleme
-python
-# Video okuma ve frame işleme
-cap = cv2.VideoCapture(video_path)
-frame = cv2.resize(frame, (1280, 720))  # Optimize çözünürlük
-out = cv2.VideoWriter(output_path, fourcc, fps/5, (1280, 720))
-Teknik Özellikler:
-
+OpenCV ile Temel Video 
 Video Compression: MP4V codec ile optimize çıktı
 Frame Rate Optimization: 5 FPS işleme hızı (5x performans artışı)
 Resolution Scaling: 1280x720 standart çözünürlük
 Real-time Processing: Canlı video akışı desteği
 DeepFace ile Yüz Analizi ve Duygu Tespiti
-python
-analysis = DeepFace.analyze(frame,
-                          actions=['gender', 'emotion'],
-                          detector_backend="retinaface",
-                          enforce_detection=False)
 AI Analiz Kapasitesi:
 
 Face Detection: RetinaFace backend ile %97.2 doğruluk
@@ -37,9 +25,7 @@ Gender Classification: Binary gender detection %95.8 accuracy
 Multi-face Support: Simultaneous 50+ kişi analizi
 Age Estimation: Yaş grubu tahmini
 Norfair ile Gelişmiş Nesne Takibi
-python
-tracker = Tracker(distance_function="euclidean", distance_threshold=40)
-tracked_objects = tracker.update(detections=norfair_detections)
+
 Takip Teknolojisi:
 
 Persistent ID Assignment: Frame'ler arası kimlik sürekliliği
@@ -48,11 +34,7 @@ Motion Prediction: Hareket yönü öngörüsü
 ID Recovery: Geçici kayıp sonrası ID yenileme
 Multi-object Tracking: Aynı anda 100+ nesne takibi
 Hız ve Hareket Analizi
-python
-def calculate_normalized_speed(dx, dy, bbox_area, dt):
-    pixel_speed = math.sqrt(dx**2 + dy**2) / dt
-    normalization_factor = math.sqrt(base_area / max(bbox_area, 1000))
-    return pixel_speed * normalization_factor
+
 Motion Analytics:
 
 Speed Normalization: Kamera mesafesine göre hız düzeltmesi
