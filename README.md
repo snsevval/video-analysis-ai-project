@@ -1,6 +1,7 @@
 
 
 🌟 Kapsamlı Video Analiz Sistemi - Proje Özeti
+
 Bu proje, güvenlik ve izleme sektörü için geliştirilmiş tam entegre video analiz platformudur. Sistem, OpenCV ile görüntü işleme, Norfair ile gelişmiş nesne takibi, DeepFace ile yüz tanıma ve duygu analizi yaparak video dosyalarından gerçek zamanlı tehlike tespiti gerçekleştirir. Flask web framework'ü ile geliştirilmiş kullanıcı dostu arayüz, karmaşık teknik işlemleri basit 3 adımlık süreçte sunar. Kullanıcılar SMTP email doğrulama ile güvenli giriş yaparak video yükler, gerçek zamanlı %0-100 ilerleme takibi ile analiz sürecini izler. Sistem, kişilere özel alarm durumları, hız analizi, yüz ifadesi değerlendirmesi ve mesafe ölçümü ile 0-10 skalalı tehlike seviyesi hesaplar. Tehlikeli durumda bulunan kişiler kırmızı kutu ile işaretlenir, çevresindekilere "tehlike altında" etiketi eklenir ve tüm veriler 4 tablolı SQLite veritabanına kaydedilir. Ollama Llama3.2:3b LLM ile akıllı rapor üretimi yapılır ve 3 çıktı dosyası (.mp4 işlenmiş video, .db veritabanı, LLM raporu) ZIP formatında kullanıcının mailine otomatik gönderilir. Arayüz, HTML5, CSS3, JavaScript ve Bootstrap ile modern responsive tasarımda geliştirilmiş, anlık bildirimler ve real-time progress tracking ile kullanıcı deneyimini optimize etmiştir.
 
 
