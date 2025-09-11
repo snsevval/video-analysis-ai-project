@@ -165,7 +165,7 @@ function checkStatus() {
             const status = data.data;
             updateAnalysisStatus(status);
             
-            if (status.status === 'completed') {
+            if (status.status === 'completed') {  // ← BU SATIRI DEĞİŞTİRDİNİZ
                 clearInterval(pollInterval);
                 showResults(status);
                 isProcessing = false;
@@ -218,7 +218,8 @@ function showResults(status) {
     // Enable download buttons
     document.getElementById('downloadVideoBtn').disabled = false;
     document.getElementById('downloadDbBtn').disabled = false;
-    
+    document.getElementById('mainPageReportBtn').disabled = false; // ← BU SATIRI EKLEYİN
+
     // Update status
     document.getElementById('statusText').textContent = 'Tamamlandı';
     updateProgress('Analiz başarıyla tamamlandı!', 100);
@@ -419,3 +420,82 @@ function createFloatingParticles() {
 
 // Initialize particles
 createFloatingParticles();
+// ============= ANA SAYFA LLM RAPOR FONKSİYONU =============
+
+function generateMainPageReport() {
+    if (!currentTaskId) {
+        showNotification('❌ Önce bir video analizi yapmalısınız!', 'error');
+        return;
+    }
+    
+    const reportBtn = document.getElementById('mainPageReportBtn');
+    reportBtn.disabled = true;
+    reportBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Rapor Hazırlanıyor...';
+    
+    // Database dosya adını oluştur
+    const dbFileName = `${currentTaskId}/alarm_analysis.db`;
+    
+    showNotification('🤖 LLM raporu hazırlanıyor... Bu işlem 3-7 dakika sürebilir.', 'info');
+    
+    // AJAX ile rapor iste
+    fetch('/generate_report', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+            db_file: dbFileName
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Raporu indirsin direkt 
+            downloadReportAsFile(data.report, data.stats);
+            showNotification('🎉 LLM raporu başarıyla oluşturuldu!', 'success');
+        } else {
+            showNotification('❌ Rapor oluşturulurken hata: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        showNotification('❌ Bağlantı hatası: ' + error.message + '\n\nOllama sunucusu çalışıyor mu?', 'error');
+    })
+    .finally(() => {
+        reportBtn.disabled = false;
+        reportBtn.innerHTML = '<i class="fas fa-robot me-2"></i>LLM Rapor';
+    });
+}
+
+function downloadReportAsFile(report, stats) {
+    const timestamp = new Date().toLocaleString('tr-TR').replace(/[/:]/g, '-');
+    const filename = `LLM_Guvenlik_Raporu_${timestamp}.txt`;
+    
+    const reportContent = `
+🤖 SECURITYVISION LLM GÜVENLİK RAPORU
+=====================================
+Oluşturma Tarihi: ${new Date().toLocaleString('tr-TR')}
+Analiz ID: ${currentTaskId}
+
+📊 İSTATİSTİKLER:
+- Toplam Alarm: ${stats.total_alarms}
+- Video Süresi: ${Math.round(stats.video_duration)} saniye
+- Kritik Durum: ${stats.critical_moments}
+
+📝 DETAYLI ANALİZ:
+${report}
+
+=====================================
+Bu rapor SecurityVision Video Güvenlik & Tehlike Tespit Sistemi 
+tarafından yapay zeka ile otomatik olarak oluşturulmuştur.
+    `;
+    
+    // Dosyayı indir
+    const blob = new Blob([reportContent], { type: 'text/plain;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+}
